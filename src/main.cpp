@@ -14,6 +14,8 @@ static LGFX_Sprite sprite(&lcd);
 
 bool httpCommunication(char* url, char* server);
 DynamicJsonDocument convertToJson(String receivedText);
+void displayThumbnail(DynamicJsonDocument searchResultJson);
+void displayTimer(DynamicJsonDocument searchResultJson);
 
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PW;
