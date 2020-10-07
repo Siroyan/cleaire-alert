@@ -21,7 +21,7 @@ const char* ssid = WIFI_SSID;
 const char* password = WIFI_PW;
 
 const char* apiKey = API_KEY;
-const char* ytSearchApiUrlNoKey = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=UC1zFJrfEKvCixhsjNSb1toQ&eventType=upcoming&maxResults=1&type=video&order=date&key=";
+const char* ytSearchApiUrlNoKey = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=UCD-miitqNY3nyukJ4Fnf4_A&eventType=upcoming&maxResults=1&type=video&order=date&key=";
 const char* ytVideoApiUrlNoIdNoKey = "https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=";
 const char* ytServer = "www.googleapis.com";
 const char* imageServer = "i.ytimg.com";
@@ -36,6 +36,7 @@ void setup() {
   // LCD Setting
   lcd.init();
   lcd.setRotation(1);
+  lcd.setBrightness(100);
   lcd.clear();
   
   // Serial comm to PC
@@ -102,11 +103,15 @@ void displayTimer(DynamicJsonDocument searchResultJson) {
     String recievedLiveDetail = YtVideoApi.getRecievedData();
     DynamicJsonDocument upComingLiveDetailJson = convertToJson(recievedLiveDetail);
     scheduledStartTime = upComingLiveDetailJson["items"][0]["liveStreamingDetails"]["scheduledStartTime"];
+    String year = String(scheduledStartTime).substring(0, 4);
+    String month = String(scheduledStartTime).substring(5, 7);
+    String day = String(scheduledStartTime).substring(8, 10);
+    String hour = String((String(scheduledStartTime).substring(11, 13)).toInt() + 9);
+    String minits = String(scheduledStartTime).substring(14, 16);
+    lcd.setTextSize(2.5);
+    lcd.drawString("This live start at", 10, M_IMG_HEIGHT + 10); 
+    lcd.drawString(year + "/" + month + "/" + day + " " + hour + ":" + minits, 10, M_IMG_HEIGHT + 35);
   }
-
-  lcd.setTextSize(2.5);
-  lcd.drawString("The live starts at", 10, M_IMG_HEIGHT + 10); 
-  lcd.drawString(scheduledStartTime, 10, M_IMG_HEIGHT + 35);
 }
 
 DynamicJsonDocument convertToJson(String receivedText) {

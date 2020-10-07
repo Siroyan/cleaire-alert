@@ -9,7 +9,7 @@ HttpCommunication::HttpCommunication() {
 void HttpCommunication::setup(const char* _url, const char* _server) {
     url = _url;
     server = _server;
-    maxRequestCount = 1;
+    maxRequestCount = 10;
 }
 
 void HttpCommunication::setup(const char* _url, const char* _server, uint8_t _maxRequestCount) {
