@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>
 #include <LovyanGFX.hpp>
 #include <Credentials.h>
+#include <HttpCommunication.h>
 
 static LGFX lcd;
 static LGFX_Sprite sprite(&lcd);
@@ -25,8 +26,9 @@ const char* imageServer = "i.ytimg.com";
 const char* scheduledStartTime;
 
 uint8_t mode = 0;
-
-WiFiClientSecure client;
+HttpCommunication YtSearchApi;
+HttpCommunication YtVideoApi;
+HttpCommunication YtThumbnail;
 
 void setup() {
   // LCD Setting
@@ -50,24 +52,22 @@ void setup() {
 
 void loop() {
   if (mode == 0) {
-    
-    // Get movie thumbnail url from youtube search api and get start time of upcoming-live from video api
     String ytSearchApiUrl = String(ytSearchApiUrlNoKey) + String(apiKey);
     Serial.println(ytSearchApiUrl);
-    
-    bool isSucceededInYtSearchApiConn = httpCommunication((char*)ytSearchApiUrl.c_str(), (char*)ytServer);
-      if (isSucceededInYtSearchApiConn) {
-      String recievedSearchResult = client.readString();
+    YtSearchApi.setup((char*)ytSearchApiUrl.c_str(), (char*)ytServer);
+    if (YtSearchApi.request()) {
+      String recievedSearchResult = YtSearchApi.getRecievedData();
       DynamicJsonDocument searchResultJson = convertToJson(recievedSearchResult);
+
       // 配信予定があるか
       if (searchResultJson["items"] != NULL) {
         const char* thumbnailUrl = searchResultJson["items"][0]["snippet"]["thumbnails"]["medium"]["url"];
         Serial.println(String(thumbnailUrl));
+
         // サムネイルのデータを取得
-        client.stop();
-        bool isSucceededInImgConn = httpCommunication((char*)thumbnailUrl, (char*)imageServer);
-        if (isSucceededInImgConn) {
-          String recievedImgString = client.readString();
+        YtThumbnail.setup((char*)thumbnailUrl, (char*)imageServer);
+        if (YtThumbnail.request()) {
+          String recievedImgString = YtThumbnail.getRecievedData();
           uint16_t jpgDataLength = recievedImgString.length();
 
           // サムネ画像のバイナリデータを作成
@@ -81,59 +81,28 @@ void loop() {
 
         // 配信予定の詳細を取得
         const char* id = searchResultJson["items"][0]["id"]["videoId"];
-        
         String ytVideoApiUrl = String(ytVideoApiUrlNoIdNoKey) + String(id) + "&key=" +  String(apiKey);
         Serial.println(ytVideoApiUrl);
-        client.stop();
-        bool isSucceededYtVideoApiConn = httpCommunication((char*)ytVideoApiUrl.c_str(), (char*)ytServer);
-        if (isSucceededYtVideoApiConn) {
-          String recievedLiveDetail = client.readString();
+
+        YtVideoApi.setup((char*)ytVideoApiUrl.c_str(), (char*)ytServer);
+        if (YtVideoApi.request()) {
+          String recievedLiveDetail = YtVideoApi.getRecievedData();
           DynamicJsonDocument upComingLiveDetailJson = convertToJson(recievedLiveDetail);
           scheduledStartTime = upComingLiveDetailJson["items"][0]["liveStreamingDetails"]["scheduledStartTime"];
         }
 
         lcd.setTextSize(2.5);
-        lcd.drawString("Live starts at...", 10, M_IMG_HEIGHT + 10); 
+        lcd.drawString("The live starts at", 10, M_IMG_HEIGHT + 10); 
         lcd.drawString(scheduledStartTime, 10, M_IMG_HEIGHT + 35);
 
         // カウントダウンモードへ移行
-        if (isSucceededInImgConn && isSucceededYtVideoApiConn) mode = 1;
+        if (YtThumbnail.isSucceeded() && YtVideoApi.isSucceeded()) mode = 1;
       }
     }
-    client.stop();
     delay(10000);
   } else if (mode == 1){
     // 配信までのカウントダウン
   }
-}
-
-bool httpCommunication(char* url, char* server) {
-  Serial.println("Try to connect " + String(server) + "...");
-  if (!client.connect(server, 443)) {
-    Serial.println("Connection failed!");
-    return false;
-  }
-  Serial.println("Connected to server!");
-
-  // Make a HTTP request:
-  client.println("GET " + String(url) + " HTTP/1.1");
-  client.println("Host: " + String(server));
-  client.println("Connection: close");
-  client.println();
-
-  // Check HTTP status
-  char status[32] = {0};
-  client.readBytesUntil('\r', status, sizeof(status));
-  if (strcmp(status, "HTTP/1.1 200 OK") != 0) {
-    Serial.println("Unexpected response: " + String(status));
-    return false;
-  }
-  char endOfHeaders[] = "\r\n\r\n";
-  if (!client.find(endOfHeaders)) {
-    Serial.println("Invalid response");
-    return false;
-  }
-  return true;
 }
 
 DynamicJsonDocument convertToJson(String receivedText) {
