@@ -53,7 +53,6 @@ void setup() {
 void loop() {
   if (mode == 0) {
     String ytSearchApiUrl = String(ytSearchApiUrlNoKey) + String(apiKey);
-    Serial.println(ytSearchApiUrl);
     YtSearchApi.setup((char*)ytSearchApiUrl.c_str(), (char*)ytServer);
     if (YtSearchApi.request()) {
       String recievedSearchResult = YtSearchApi.getRecievedData();
@@ -61,40 +60,8 @@ void loop() {
 
       // 配信予定があるか
       if (searchResultJson["items"] != NULL) {
-        const char* thumbnailUrl = searchResultJson["items"][0]["snippet"]["thumbnails"]["medium"]["url"];
-        Serial.println(String(thumbnailUrl));
-
-        // サムネイルのデータを取得
-        YtThumbnail.setup((char*)thumbnailUrl, (char*)imageServer);
-        if (YtThumbnail.request()) {
-          String recievedImgString = YtThumbnail.getRecievedData();
-          uint16_t jpgDataLength = recievedImgString.length();
-
-          // サムネ画像のバイナリデータを作成
-          uint8_t* jpgData = new uint8_t[jpgDataLength];
-          for (int i=0; i < jpgDataLength; i++) jpgData[i] = recievedImgString.charAt(i);
-
-          // サムネを表示
-          lcd.drawJpg(jpgData, jpgDataLength, 0, 0, M_IMG_WIDTH, M_IMG_HEIGHT);
-          free(jpgData);
-        }
-
-        // 配信予定の詳細を取得
-        const char* id = searchResultJson["items"][0]["id"]["videoId"];
-        String ytVideoApiUrl = String(ytVideoApiUrlNoIdNoKey) + String(id) + "&key=" +  String(apiKey);
-        Serial.println(ytVideoApiUrl);
-
-        YtVideoApi.setup((char*)ytVideoApiUrl.c_str(), (char*)ytServer);
-        if (YtVideoApi.request()) {
-          String recievedLiveDetail = YtVideoApi.getRecievedData();
-          DynamicJsonDocument upComingLiveDetailJson = convertToJson(recievedLiveDetail);
-          scheduledStartTime = upComingLiveDetailJson["items"][0]["liveStreamingDetails"]["scheduledStartTime"];
-        }
-
-        lcd.setTextSize(2.5);
-        lcd.drawString("The live starts at", 10, M_IMG_HEIGHT + 10); 
-        lcd.drawString(scheduledStartTime, 10, M_IMG_HEIGHT + 35);
-
+        displayThumbnail(searchResultJson);
+        displayTimer(searchResultJson);
         // カウントダウンモードへ移行
         if (YtThumbnail.isSucceeded() && YtVideoApi.isSucceeded()) mode = 1;
       }
@@ -103,6 +70,41 @@ void loop() {
   } else if (mode == 1){
     // 配信までのカウントダウン
   }
+}
+
+void displayThumbnail(DynamicJsonDocument searchResultJson) {
+  const char* thumbnailUrl = searchResultJson["items"][0]["snippet"]["thumbnails"]["medium"]["url"];
+  // サムネイルのデータを取得
+  YtThumbnail.setup((char*)thumbnailUrl, (char*)imageServer);
+  if (YtThumbnail.request()) {
+    String recievedImgString = YtThumbnail.getRecievedData();
+    uint16_t jpgDataLength = recievedImgString.length();
+
+    // サムネ画像のバイナリデータを作成
+    uint8_t* jpgData = new uint8_t[jpgDataLength];
+    for (int i=0; i < jpgDataLength; i++) jpgData[i] = recievedImgString.charAt(i);
+
+    // サムネを表示
+    lcd.drawJpg(jpgData, jpgDataLength, 0, 0, M_IMG_WIDTH, M_IMG_HEIGHT);
+    free(jpgData);
+  }
+}
+
+void displayTimer(DynamicJsonDocument searchResultJson) {
+  // 配信予定の詳細を取得
+  const char* id = searchResultJson["items"][0]["id"]["videoId"];
+  String ytVideoApiUrl = String(ytVideoApiUrlNoIdNoKey) + String(id) + "&key=" +  String(apiKey);
+
+  YtVideoApi.setup((char*)ytVideoApiUrl.c_str(), (char*)ytServer);
+  if (YtVideoApi.request()) {
+    String recievedLiveDetail = YtVideoApi.getRecievedData();
+    DynamicJsonDocument upComingLiveDetailJson = convertToJson(recievedLiveDetail);
+    scheduledStartTime = upComingLiveDetailJson["items"][0]["liveStreamingDetails"]["scheduledStartTime"];
+  }
+
+  lcd.setTextSize(2.5);
+  lcd.drawString("The live starts at", 10, M_IMG_HEIGHT + 10); 
+  lcd.drawString(scheduledStartTime, 10, M_IMG_HEIGHT + 35);
 }
 
 DynamicJsonDocument convertToJson(String receivedText) {
