@@ -9,12 +9,14 @@ HttpCommunication::HttpCommunication() {
 void HttpCommunication::setup(const char* _url, const char* _server) {
     url = _url;
     server = _server;
+    delayTimeMs = 1000;
     maxRequestCount = 10;
 }
 
 void HttpCommunication::setup(const char* _url, const char* _server, uint8_t _maxRequestCount) {
     url = _url;
     server = _server;
+    delayTimeMs = 1000;
     maxRequestCount = _maxRequestCount;
 }
 
@@ -22,6 +24,7 @@ bool HttpCommunication::request() {
     successFlag = false;
     requestCount++;
     // Googleに怒られないように
+    if (millis() - prevRequestTime < delayTimeMs) return false;
     if (getRequestCount() > maxRequestCount) return false;
 
     if (!client.connect(server, 443)) return false;
@@ -44,6 +47,7 @@ bool HttpCommunication::request() {
 
     successFlag = true;
     requestCount = 0;
+    prevRequestTime = millis();
     return true;
 }
 

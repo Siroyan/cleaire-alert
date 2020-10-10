@@ -19,6 +19,8 @@ class HttpCommunication {
         const char* server;
         String recievedData;
         bool successFlag;
+        uint16_t delayTimeMs;
+        unsigned long prevRequestTime;
         uint8_t maxRequestCount;
         uint8_t requestCount;
 };
