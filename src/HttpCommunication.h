@@ -10,10 +10,10 @@ class HttpCommunication {
         void setup(const char* _url, const char* _server);
         void setup(const char* _url, const char* _server, uint8_t _maxRequestCount);
         bool request();
-        uint8_t getRequestCount();
         bool isSucceeded();
         String getRecievedData();
     private:
+        uint8_t getRequestCount();
         WiFiClientSecure client;
         const char* url;
         const char* server;
