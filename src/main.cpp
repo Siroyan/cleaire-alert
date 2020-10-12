@@ -6,18 +6,16 @@
 #include "Credentials.h"
 #include "HttpCommunication.h"
 #include "UpcomingLive.h"
+#include "Thumbnail.h"
+#include "LiveStartTime.h"
 #include "time.h"
+
+#define M_IMG_WIDTH 320
+#define M_IMG_HEIGHT 180
 
 static LGFX lcd;
 static LGFX_Sprite sprite(&lcd);
 
-#define M_IMG_WIDTH  (320)
-#define M_IMG_HEIGHT (180)
-
-bool httpCommunication(char* url, char* server);
-DynamicJsonDocument convertToJson(String receivedText);
-void displayThumbnail(const char* thumbnailUrl);
-void getLiveStartTime(const char* liveId);
 void displayTimer();
 long convertToUnixTime(const char* iso8601Time);
 
@@ -35,8 +33,8 @@ const char* scheduledStartTime;
 
 uint8_t mode = 0;
 UpcomingLive upcomingLive;
-HttpCommunication YtVideoApi;
-HttpCommunication YtThumbnail;
+Thumbnail thumbnail;
+LiveStartTime liveStartTime;
 
 void setup() {
 	// LCD Setting
@@ -64,50 +62,25 @@ void loop() {
 		String ytSearchApiUrl = String(ytSearchApiUrlNoKey) + String(apiKey);
 		upcomingLive.setup((char*)ytSearchApiUrl.c_str(), (char*)ytServer);
 		if (upcomingLive.request()) {
-			Serial.println("upcoming live ok");
 			if (upcomingLive.isExist()) {
-				displayThumbnail(upcomingLive.getThumbnailUrl());
-				// Serial.println(upcomingLive.getThumbnailUrl());
-				getLiveStartTime(upcomingLive.getLiveId());
-				// Serial.println(upcomingLive.getLiveId());
-
+				// サムネイルを取得,表示
+				thumbnail.setup((char*)upcomingLive.getThumbnailUrl(), (char*)imageServer);
+				if (thumbnail.request()) {
+					lcd.drawJpg(thumbnail.getJpgData(), thumbnail.getImgLength(), 0, 0, thumbnail.getImgWidth(), thumbnail.getImgHeight());
+				}
+				// 配信開始時刻を取得
+				String ytVideoApiUrl = String(ytVideoApiUrlNoIdNoKey) + String(upcomingLive.getLiveId()) + "&key=" +  String(apiKey);
+				liveStartTime.setup((char*)ytVideoApiUrl.c_str(), (char*)ytServer);
+				if (liveStartTime.request()) {
+					scheduledStartTime = liveStartTime.getStartTime();
+				}
 				// カウントダウンモードへ移行
-				if (YtThumbnail.isSucceeded() && YtVideoApi.isSucceeded()) mode = 1;
+				if (thumbnail.isSucceeded() && liveStartTime.isSucceeded()) mode = 1;
 			}
 		}
 	} else if (mode == 1){
 		// 配信までのカウントダウン
 		displayTimer();
-	}
-}
-
-void displayThumbnail(const char* thumbnailUrl) {
-	// サムネイルのデータを取得
-	YtThumbnail.setup((char*)thumbnailUrl, (char*)imageServer);
-	if (YtThumbnail.request()) {
-		Serial.println("thumbnail ok");
-		String recievedImgString = YtThumbnail.getRecievedData();
-		uint16_t jpgDataLength = recievedImgString.length();
-
-		// サムネ画像のバイナリデータを作成
-		uint8_t* jpgData = new uint8_t[jpgDataLength];
-		for (int i=0; i < jpgDataLength; i++) jpgData[i] = recievedImgString.charAt(i);
-
-		// サムネを表示
-		lcd.drawJpg(jpgData, jpgDataLength, 0, 0, M_IMG_WIDTH, M_IMG_HEIGHT);
-		free(jpgData);
-	}
-}
-
-void getLiveStartTime(const char* liveId) {
-	String ytVideoApiUrl = String(ytVideoApiUrlNoIdNoKey) + String(liveId) + "&key=" +  String(apiKey);
-	YtVideoApi.setup((char*)ytVideoApiUrl.c_str(), (char*)ytServer);
-	if (YtVideoApi.request()) {
-		Serial.println("live detail ok");
-		// 配信開始時間を取得
-		String recievedLiveDetail = YtVideoApi.getRecievedData();
-		DynamicJsonDocument upComingLiveDetailJson = convertToJson(recievedLiveDetail);
-		scheduledStartTime = upComingLiveDetailJson["items"][0]["liveStreamingDetails"]["scheduledStartTime"];
 	}
 }
 
