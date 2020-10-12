@@ -32,7 +32,7 @@ DynamicJsonDocument convertToJson(String receivedText) {
 	receivedText.trim();
 	receivedText.remove(receivedText.length()-1, 1);
 	// convert to json
-	const size_t capacity = 2000;
+	const size_t capacity = 3000;
 	DynamicJsonDocument doc(capacity);
 	DeserializationError error = deserializeJson(doc, receivedText);
 	if (error) Serial.println("deserializeJson() failed: " + String(error.c_str()));

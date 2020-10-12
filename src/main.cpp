@@ -27,7 +27,7 @@ const char* password = WIFI_PW;
 const char* ntpServer = "ntp.nict.jp";
 
 const char* apiKey = API_KEY;
-const char* ytSearchApiUrlNoKey = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=UCBi8YaVyZpiKWN3_Z0dCTfQ&eventType=upcoming&maxResults=1&type=video&order=date&key=";
+const char* ytSearchApiUrlNoKey = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=UCjlmCrq4TP1I4xguOtJ-31w&eventType=upcoming&maxResults=1&type=video&order=date&key=";
 const char* ytVideoApiUrlNoIdNoKey = "https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=";
 const char* ytServer = "www.googleapis.com";
 const char* imageServer = "i.ytimg.com";
@@ -39,24 +39,24 @@ HttpCommunication YtVideoApi;
 HttpCommunication YtThumbnail;
 
 void setup() {
-  // LCD Setting
-  lcd.init();
-  lcd.setRotation(1);
-  lcd.setBrightness(128);
-  lcd.setColorDepth(24);
-  lcd.clear();
-  lcd.setFont(&fonts::lgfxJapanGothic_36);
-  
-  // Serial comm to PC
-  Serial.begin(115200);
-  delay(1000);
+	// LCD Setting
+	lcd.init();
+	lcd.setRotation(1);
+	lcd.setBrightness(128);
+	lcd.setColorDepth(24);
+	lcd.clear();
+	lcd.setFont(&fonts::lgfxJapanGothic_36);
 
-  // Wi-Fi
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED);
-  Serial.println("Connected to " + String(ssid));
+	// PCと
+	Serial.begin(115200);
+	delay(1000);
 
-  configTime(0, 0, ntpServer);
+	// Wi-Fi
+	WiFi.begin(ssid, password);
+	while (WiFi.status() != WL_CONNECTED);
+	Serial.println("Connected to " + String(ssid));
+
+	configTime(0, 0, ntpServer);
 }
 
 void loop() {
@@ -64,9 +64,13 @@ void loop() {
 		String ytSearchApiUrl = String(ytSearchApiUrlNoKey) + String(apiKey);
 		upcomingLive.setup((char*)ytSearchApiUrl.c_str(), (char*)ytServer);
 		if (upcomingLive.request()) {
+			Serial.println("upcoming live ok");
 			if (upcomingLive.isExist()) {
 				displayThumbnail(upcomingLive.getThumbnailUrl());
+				// Serial.println(upcomingLive.getThumbnailUrl());
 				getLiveStartTime(upcomingLive.getLiveId());
+				// Serial.println(upcomingLive.getLiveId());
+
 				// カウントダウンモードへ移行
 				if (YtThumbnail.isSucceeded() && YtVideoApi.isSucceeded()) mode = 1;
 			}
@@ -81,6 +85,7 @@ void displayThumbnail(const char* thumbnailUrl) {
 	// サムネイルのデータを取得
 	YtThumbnail.setup((char*)thumbnailUrl, (char*)imageServer);
 	if (YtThumbnail.request()) {
+		Serial.println("thumbnail ok");
 		String recievedImgString = YtThumbnail.getRecievedData();
 		uint16_t jpgDataLength = recievedImgString.length();
 
@@ -98,6 +103,7 @@ void getLiveStartTime(const char* liveId) {
 	String ytVideoApiUrl = String(ytVideoApiUrlNoIdNoKey) + String(liveId) + "&key=" +  String(apiKey);
 	YtVideoApi.setup((char*)ytVideoApiUrl.c_str(), (char*)ytServer);
 	if (YtVideoApi.request()) {
+		Serial.println("live detail ok");
 		// 配信開始時間を取得
 		String recievedLiveDetail = YtVideoApi.getRecievedData();
 		DynamicJsonDocument upComingLiveDetailJson = convertToJson(recievedLiveDetail);
