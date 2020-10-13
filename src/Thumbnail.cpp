@@ -16,11 +16,3 @@ uint16_t Thumbnail::getImgLength() {
     String recievedImgString = HttpCommunication::getRecievedData();
     return recievedImgString.length();
 }
-
-uint8_t Thumbnail::getImgWidth() {
-    return 320;
-}
-
-uint8_t Thumbnail::getImgHeight() {
-    return 180;
-}

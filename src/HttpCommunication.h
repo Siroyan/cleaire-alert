@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
 
 class HttpCommunication {
     public:
@@ -12,6 +13,7 @@ class HttpCommunication {
         bool request();
         bool isSucceeded();
         String getRecievedData();
+        DynamicJsonDocument getRecievedJson();
     private:
         uint8_t getRequestCount();
         WiFiClientSecure client;

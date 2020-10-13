@@ -37,6 +37,8 @@ Thumbnail thumbnail;
 LiveStartTime liveStartTime;
 
 void setup() {
+	M5.begin();
+
 	// LCD Setting
 	lcd.init();
 	lcd.setRotation(1);
@@ -54,19 +56,23 @@ void setup() {
 	while (WiFi.status() != WL_CONNECTED);
 	Serial.println("Connected to " + String(ssid));
 
+	// NTP
 	configTime(0, 0, ntpServer);
 }
 
 void loop() {
-	if (mode == 0) {
+	M5.update();
+	if (mode == 0 && M5.BtnA.wasPressed()) {
 		String ytSearchApiUrl = String(ytSearchApiUrlNoKey) + String(apiKey);
 		upcomingLive.setup((char*)ytSearchApiUrl.c_str(), (char*)ytServer);
 		if (upcomingLive.request()) {
+			Serial.println("Request succeeded.");
 			if (upcomingLive.isExist()) {
+				Serial.println("Upcoming Live is exist.");
 				// サムネイルを取得,表示
 				thumbnail.setup((char*)upcomingLive.getThumbnailUrl(), (char*)imageServer);
 				if (thumbnail.request()) {
-					lcd.drawJpg(thumbnail.getJpgData(), thumbnail.getImgLength(), 0, 0, thumbnail.getImgWidth(), thumbnail.getImgHeight());
+					lcd.drawJpg(thumbnail.getJpgData(), thumbnail.getImgLength(), 0, 0, M_IMG_WIDTH, M_IMG_HEIGHT);
 				}
 				// 配信開始時刻を取得
 				String ytVideoApiUrl = String(ytVideoApiUrlNoIdNoKey) + String(upcomingLive.getLiveId()) + "&key=" +  String(apiKey);

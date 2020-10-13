@@ -1,32 +1,30 @@
 #include <Arduino.h>
 #include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
 #include "HttpCommunication.h"
 
 HttpCommunication::HttpCommunication() {
     requestCount = 0;
+    prevRequestTime = millis();
 }
 
 void HttpCommunication::setup(const char* _url, const char* _server) {
     url = _url;
     server = _server;
-    delayTimeMs = 1000;
     maxRequestCount = 20;
 }
 
 void HttpCommunication::setup(const char* _url, const char* _server, uint8_t _maxRequestCount) {
     url = _url;
     server = _server;
-    delayTimeMs = 1000;
     maxRequestCount = _maxRequestCount;
 }
 
 bool HttpCommunication::request() {
     successFlag = false;
-    requestCount++;
-    // Googleに怒られないように
-    if ((millis() - prevRequestTime) < delayTimeMs) return false;
+
+    if ((millis() - prevRequestTime) < 1000) return false;
     prevRequestTime = millis();
-    if (requestCount > maxRequestCount) return false;
 
     if (!client.connect(server, 443)) return false;
     // Send the HTTP request:
@@ -59,4 +57,18 @@ bool HttpCommunication::isSucceeded() {
 
 String HttpCommunication::getRecievedData() {
     return recievedData;
+}
+
+DynamicJsonDocument HttpCommunication::getRecievedJson() {
+    String receivedText = HttpCommunication::getRecievedData();
+	// Clean up http responce. Get JSON only.
+	receivedText.remove(0, 3);
+	receivedText.trim();
+	receivedText.remove(receivedText.length()-1, 1);
+	// convert to json
+	const size_t capacity = 3000;
+	DynamicJsonDocument doc(capacity);
+	DeserializationError error = deserializeJson(doc, receivedText);
+	if (error) Serial.println("deserializeJson() failed: " + String(error.c_str()));
+	return doc;
 }
