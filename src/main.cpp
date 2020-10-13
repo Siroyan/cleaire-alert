@@ -82,14 +82,11 @@ void loop() {
 				if (thumbnail.isSucceeded() && liveStartTime.isSucceeded()) mode = 1;
 			}
 		}
-	} else if (mode == 1){
+	} else if (mode == 1) {
 		// タイマーをセット
 		cTimer.update(scheduledStartTime, time(NULL));
 		// タイマーを表示
-		if (cTimer.isSoon()) {
-			lcd.drawString("開始まで " + cTimer.getDiffH() + ":" + cTimer.getDiffM() + ":" + cTimer.getDiffS(), 5, M_IMG_HEIGHT + 10);
-		} else {
-			lcd.drawString("一日以上先の配信です", 10, M_IMG_HEIGHT + 10);
-		}
+		if (cTimer.isSoon()) lcd.drawString("開始まで " + cTimer.getDiffH() + ":" + cTimer.getDiffM() + ":" + cTimer.getDiffS(), 5, M_IMG_HEIGHT + 10);
+		else lcd.drawString("一日以上先の配信です", 10, M_IMG_HEIGHT + 10);
 	}
 }
