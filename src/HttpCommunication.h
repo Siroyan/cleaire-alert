@@ -9,7 +9,6 @@ class HttpCommunication {
     public:
         HttpCommunication();
         void setup(const char* _url, const char* _server);
-        void setup(const char* _url, const char* _server, uint8_t _maxRequestCount);
         bool request();
         bool isSucceeded();
         String getRecievedData();

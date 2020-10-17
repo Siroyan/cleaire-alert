@@ -23,7 +23,7 @@ const char* password = WIFI_PW;
 const char* ntpServer = "ntp.nict.jp";
 
 const char* apiKey = API_KEY;
-const char* ytSearchApiUrlNoKey = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=UCjlmCrq4TP1I4xguOtJ-31w&eventType=upcoming&maxResults=1&type=video&order=date&key=";
+const char* ytSearchApiUrlNoKey = "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=UC1zFJrfEKvCixhsjNSb1toQ&eventType=upcoming&maxResults=1&type=video&order=date&key=";
 const char* ytVideoApiUrlNoIdNoKey = "https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=";
 const char* ytServer = "www.googleapis.com";
 const char* imageServer = "i.ytimg.com";
@@ -34,12 +34,9 @@ uint8_t mode = 0;
 UpcomingLive upcomingLive;
 Thumbnail thumbnail;
 LiveStartTime liveStartTime;
-
 CountdownTimer cTimer;
 
 void setup() {
-	M5.begin();
-
 	// LCD Setting
 	lcd.init();
 	lcd.setRotation(1);
@@ -56,37 +53,57 @@ void setup() {
 	WiFi.begin(ssid, password);
 	while (WiFi.status() != WL_CONNECTED);
 	Serial.println("Connected to " + String(ssid));
+	delay(1000);
 
-	// NTP
 	configTime(0, 0, ntpServer);
+	delay(1000);
+
+	M5.begin(false, true, true);
 }
 
 void loop() {
-	M5.update();
-	if (mode == 0 && M5.BtnA.wasPressed()) {
+	if (mode == 0 && M5.BtnA.wasReleased()) {
 		String ytSearchApiUrl = String(ytSearchApiUrlNoKey) + String(apiKey);
 		upcomingLive.setup((char*)ytSearchApiUrl.c_str(), (char*)ytServer);
 		if (upcomingLive.request()) {
-			Serial.println("Request succeeded.");
+			Serial.println("Search API OK");
 			if (upcomingLive.isExist()) {
-				Serial.println("Upcoming Live is exist.");
+				Serial.println("Upcoming-live is exist.");
 				// サムネイルを取得,表示
 				thumbnail.setup((char*)upcomingLive.getThumbnailUrl(), (char*)imageServer);
-				if (thumbnail.request()) lcd.drawJpg(thumbnail.getJpgData(), thumbnail.getImgLength(), 0, 0, M_IMG_WIDTH, M_IMG_HEIGHT);
+				if (thumbnail.request()) {
+					Serial.println("Thumbnail OK");
+					lcd.drawJpg(thumbnail.getJpgData(), thumbnail.getImgLength(), 0, 0, M_IMG_WIDTH, M_IMG_HEIGHT);
+				} else {
+					Serial.println("Thumbnail NG");
+				}
 				// 配信開始時刻を取得
 				String ytVideoApiUrl = String(ytVideoApiUrlNoIdNoKey) + String(upcomingLive.getLiveId()) + "&key=" +  String(apiKey);
 				liveStartTime.setup((char*)ytVideoApiUrl.c_str(), (char*)ytServer);
-				// 配信開始時刻を取得
-				if (liveStartTime.request()) scheduledStartTime = liveStartTime.getStartTime();
+				if (liveStartTime.request()) {
+					Serial.println("Video API OK");
+					scheduledStartTime = liveStartTime.getStartTime();
+				} else {
+					Serial.println("Video API NG");
+				}
 				// カウントダウンモードへ移行
 				if (thumbnail.isSucceeded() && liveStartTime.isSucceeded()) mode = 1;
+			} else {
+				Serial.println("Upcoming-live is not exist.");
 			}
+		} else {
+			Serial.println("Search API NG");
 		}
 	} else if (mode == 1) {
 		// タイマーをセット
 		cTimer.update(scheduledStartTime, time(NULL));
 		// タイマーを表示
-		if (cTimer.isSoon()) lcd.drawString("開始まで " + cTimer.getDiffH() + ":" + cTimer.getDiffM() + ":" + cTimer.getDiffS(), 5, M_IMG_HEIGHT + 10);
-		else lcd.drawString("一日以上先の配信です", 10, M_IMG_HEIGHT + 10);
+		if (cTimer.isUpcoming()) {
+			if (cTimer.isSoon()) lcd.drawString("開始まで " + cTimer.getDiffH() + ":" + cTimer.getDiffM() + ":" + cTimer.getDiffS(), 5, M_IMG_HEIGHT + 10);
+			else lcd.drawString("一日以上先の配信です", 10, M_IMG_HEIGHT + 10);
+		} else {
+			lcd.drawString("直近の配信です", 30, M_IMG_HEIGHT + 10);
+		}
 	}
+	M5.update();
 }

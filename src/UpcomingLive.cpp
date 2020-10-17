@@ -16,6 +16,6 @@ const char* UpcomingLive::getLiveId() {
 bool UpcomingLive::isExist() {
 	DynamicJsonDocument searchResultJson = HttpCommunication::getRecievedJson();
 	
-	if (searchResultJson["items"] != NULL) return false;
-	else return true;
+	if (searchResultJson["items"] != NULL) return true;
+	else return false;
 }

@@ -6,29 +6,27 @@
 HttpCommunication::HttpCommunication() {
     requestCount = 0;
     prevRequestTime = millis();
+    maxRequestCount = 5;
 }
 
 void HttpCommunication::setup(const char* _url, const char* _server) {
     url = _url;
     server = _server;
-    maxRequestCount = 20;
-}
-
-void HttpCommunication::setup(const char* _url, const char* _server, uint8_t _maxRequestCount) {
-    url = _url;
-    server = _server;
-    maxRequestCount = _maxRequestCount;
 }
 
 bool HttpCommunication::request() {
+    String serverUrl = String(url);
     successFlag = false;
 
+    // Googleに怒られないように
     if ((millis() - prevRequestTime) < 1000) return false;
     prevRequestTime = millis();
+    if (maxRequestCount < requestCount) return false;
 
     if (!client.connect(server, 443)) return false;
+    requestCount++;
     // Send the HTTP request:
-    client.println("GET " + String(url) + " HTTP/1.1");
+    client.println("GET " + serverUrl + " HTTP/1.1");
     client.println("Host: " + String(server));
     client.println("Connection: close");
     client.println();
@@ -36,7 +34,9 @@ bool HttpCommunication::request() {
     // Check HTTP status
     char status[32] = {0};
     client.readBytesUntil('\r', status, sizeof(status));
+    Serial.println(status);
     if (strcmp(status, "HTTP/1.1 200 OK") != 0) return false;
+
     char endOfHeaders[] = "\r\n\r\n";
     if (!client.find(endOfHeaders)) return false;
 

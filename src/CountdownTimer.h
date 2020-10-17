@@ -7,6 +7,7 @@ class CountdownTimer {
     public:
         CountdownTimer();
         void update(const char* _startTime, long _nowTime);
+        bool isUpcoming();
         bool isSoon();
         String getDiffH();
         String getDiffM();

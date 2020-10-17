@@ -36,8 +36,13 @@ void CountdownTimer::update(const char* _startTime, long _nowTime) {
 }
 
 bool CountdownTimer::isSoon() {
-    if (diffTime > 24 * 60 * 60) return false;
-    else return true;
+    if (diffTime < 24 * 60 * 60) return true;
+    else return false;
+}
+
+bool CountdownTimer::isUpcoming() {
+    if (diffTime > 0) return true;
+    else return false;
 }
 
 String CountdownTimer::getDiffH() {
